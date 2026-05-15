@@ -1,11 +1,12 @@
 import RoomApp from '@/components/RoomApp'
 
 interface Props {
-  params: { code: string }
-  searchParams: { observe?: string }
+  params: Promise<{ code: string }>
+  searchParams: Promise<{ observe?: string }>
 }
 
-export default function RoomPage({ params, searchParams }: Props) {
-  const observe = searchParams.observe === 'true'
-  return <RoomApp code={params.code} observe={observe} />
+export default async function RoomPage({ params, searchParams }: Props) {
+  const { code } = await params
+  const { observe } = await searchParams
+  return <RoomApp code={code} observe={observe === 'true'} />
 }
