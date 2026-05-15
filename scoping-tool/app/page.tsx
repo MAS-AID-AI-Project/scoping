@@ -1,5 +1,5 @@
-import ScopingApp from '@/components/ScopingApp'
+import Landing from '@/components/Landing'
 
 export default function Home() {
-  return <ScopingApp persist />
+  return <Landing />
 }

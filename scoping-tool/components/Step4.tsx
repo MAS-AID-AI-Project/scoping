@@ -1,522 +1,400 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, FileText, X, Printer, AlertTriangle } from 'lucide-react'
-import { type Problem, type FeasibilityEntry, type SpecData, type StakeholderRow } from '@/lib/types'
+import { Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { DEFAULT_SIEVE_QUESTIONS, SUGGESTED_REGS, uid, emptyApproachFeasibility } from '@/lib/types'
+import type { FeasibilityData, ApproachFeasibility, SolutionApproach, RegEntry, SieveQuestion } from '@/lib/types'
 
 interface Props {
-  problem: Problem
-  feasibility: FeasibilityEntry
-  baseline?: boolean
-  spec: SpecData
-  onUpdateSpec: (field: keyof SpecData, value: unknown) => void
-  onUpdateStakeholder: (id: string, field: keyof StakeholderRow, value: string) => void
-  onAddStakeholder: () => void
-  onDeleteStakeholder: (id: string) => void
-  onUpdateObjective: (index: number, value: string) => void
-  onAddObjective: () => void
-  onDeleteObjective: (index: number) => void
+  feasibility: FeasibilityData
+  approaches: SolutionApproach[]
+  onUpdate: (field: string, value: unknown) => void
+  onUpdateApproach: (approachId: string, field: keyof ApproachFeasibility, value: unknown) => void
+  onAddRegulation: (approachId: string, reg: RegEntry) => void
+  onUpdateRegulation: (approachId: string, regId: string, field: keyof RegEntry, value: string) => void
+  onDeleteRegulation: (approachId: string, regId: string) => void
+  onAddCustomQuestion: (q: SieveQuestion) => void
+  onDeleteCustomQuestion: (qid: string) => void
+  onUpdateSieveAnswer: (approachId: string, qid: string, val: boolean) => void
 }
 
 export default function Step4({
-  problem,
-  feasibility,
-  baseline,
-  spec,
-  onUpdateSpec,
-  onUpdateStakeholder,
-  onAddStakeholder,
-  onDeleteStakeholder,
-  onUpdateObjective,
-  onAddObjective,
-  onDeleteObjective,
+  feasibility, approaches,
+  onUpdate, onUpdateApproach,
+  onAddRegulation, onUpdateRegulation, onDeleteRegulation,
+  onAddCustomQuestion, onDeleteCustomQuestion, onUpdateSieveAnswer,
 }: Props) {
-  const [showPreview, setShowPreview] = useState(false)
+  const named = approaches.filter(a => a.name.trim())
+  const [activeIdx, setActiveIdx] = useState(0)
+  const [slideKey, setSlideKey] = useState(0)
+  const [slideDir, setSlideDir] = useState<'right' | 'left' | ''>('')
+  const [sieveIdx, setSieveIdx] = useState(0)
+  const [newRegName, setNewRegName] = useState('')
+  const [newQText, setNewQText] = useState('')
+  const [showAddQ, setShowAddQ] = useState(false)
 
-  const handlePrint = () => {
-    const win = window.open('', '_blank')
-    if (!win) { alert('Please allow popups for this site.'); return }
+  const activeApproach = named[activeIdx]
+  const af: ApproachFeasibility = activeApproach
+    ? (feasibility.perApproach[activeApproach.id] ?? emptyApproachFeasibility())
+    : emptyApproachFeasibility()
 
-    const esc = (s: string) =>
-      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  const allQuestions = [...DEFAULT_SIEVE_QUESTIONS, ...feasibility.customQuestions]
+  const sieveQ = allQuestions[sieveIdx]
+  const sieveAnimClass = slideDir === 'right' ? 'slide-from-right' : slideDir === 'left' ? 'slide-from-left' : ''
 
-    const today = new Date().toISOString().slice(0, 10)
-
-    const regHtml = feasibility.regulations.length > 0
-      ? feasibility.regulations.map(r => `
-          <div class="reg-entry">
-            <p class="reg-name">${esc(r.name)}</p>
-            ${r.articles ? `<p class="reg-articles">${esc(r.articles).replace(/\n/g, '<br>')}</p>` : ''}
-          </div>`).join('')
-      : '<p class="empty">No regulations specified.</p>'
-
-    const stakeholderRows = spec.stakeholders.filter(r => r.role.trim()).map(r => `
-      <tr>
-        <td class="sh-role">${esc(r.role)}</td>
-        <td>${esc(r.concerns)}</td>
-        <td>${esc(r.metrics)}</td>
-      </tr>`).join('')
-
-    const objectivesHtml = spec.objectives.filter(o => o.trim()).map((obj, i) => `
-      <li><span class="obj-num">${i + 1}.</span> ${esc(obj)}</li>`).join('')
-
-    const challengeHtml = spec.businessChallengeRaw.split('\n').filter(l => l.trim()).map(line => `
-      <li><span class="bullet">•</span> ${esc(line.trim())}</li>`).join('')
-
-    const solutionHtml = spec.solutionComponents
-      ? spec.solutionComponents.split('\n').filter(l => l.trim()).map(line => `
-          <li><span class="bullet">•</span> ${esc(line.trim())}</li>`).join('')
-      : ''
-
-    const baselineNote = baseline ? `
-      <div class="baseline-note">
-        <strong>Note:</strong> A non-AI baseline comparison has been flagged for this problem.
-        Include a reference approach (e.g. rule-based system or heuristic scorecard) and document
-        how the AI solution outperforms it.
-      </div>` : ''
-
-    win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>AI Scoping Briefing — ${esc(problem.title)}</title>
-  <style>
-    @page { size: A4; margin: 20mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Georgia, "Times New Roman", serif; font-size: 11pt; color: #1e293b; line-height: 1.6; }
-    .date { text-align: right; font-size: 10pt; color: #64748b; margin-bottom: 32px; }
-    h1 { font-size: 18pt; font-weight: normal; margin-bottom: 4px; }
-    .subtitle { font-style: italic; font-size: 12pt; color: #475569; margin-bottom: 16px; }
-    .meta { display: flex; gap: 24px; font-size: 10pt; margin-bottom: 24px; }
-    .exec-summary { font-size: 11pt; line-height: 1.7; margin-bottom: 32px; white-space: pre-line; }
-    .section { margin-bottom: 24px; page-break-inside: avoid; }
-    .section h2 { font-size: 11pt; font-weight: bold; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 12px; }
-    ul.bullets, ol.numbered { list-style: none; padding: 0; }
-    ul.bullets li, ol.numbered li { display: flex; gap: 8px; margin-bottom: 6px; font-size: 10.5pt; line-height: 1.6; }
-    .bullet { color: #94a3b8; flex-shrink: 0; margin-top: 1px; }
-    .obj-num { font-weight: 600; flex-shrink: 0; margin-top: 1px; }
-    table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-    thead tr { border-bottom: 2px solid #94a3b8; }
-    th { text-align: left; padding: 6px 12px 6px 0; font-weight: bold; }
-    td { padding: 6px 12px 6px 0; vertical-align: top; border-bottom: 1px solid #f1f5f9; }
-    .sh-role { font-weight: 600; }
-    .reg-entry { margin-bottom: 14px; }
-    .reg-name { font-weight: bold; font-size: 10.5pt; margin-bottom: 3px; }
-    .reg-articles { font-size: 10pt; color: #475569; line-height: 1.6; }
-    .empty { color: #94a3b8; font-style: italic; font-size: 10pt; }
-    .baseline-note { background: #fefce8; border: 1px solid #fde68a; border-radius: 4px; padding: 10px 14px; margin-bottom: 14px; font-size: 10pt; color: #92400e; }
-    .data-assets { font-size: 10.5pt; line-height: 1.7; white-space: pre-line; }
-  </style>
-</head>
-<body>
-  <p class="date">${today}</p>
-  <h1>Executive Summary</h1>
-  <p class="subtitle">${esc(problem.title)}</p>
-  <div class="meta">
-    <span><strong>Client:</strong> ${esc(spec.clientName || '—')}</span>
-    <span><strong>Timeline:</strong> ${esc(spec.timeline || '—')}</span>
-  </div>
-  <p class="exec-summary">${esc(spec.executiveSummary)}</p>
-
-  <div class="section">
-    <h2>Business Challenge</h2>
-    <ul class="bullets">${challengeHtml}</ul>
-  </div>
-
-  <div class="section">
-    <h2>Objectives</h2>
-    <ol class="numbered">${objectivesHtml}</ol>
-  </div>
-
-  <div class="section">
-    <h2>Data Assets</h2>
-    <p class="data-assets">${esc(spec.dataAssetsDetail || '—')}</p>
-  </div>
-
-  <div class="section">
-    <h2>Regulatory &amp; Compliance Requirements</h2>
-    ${regHtml}
-  </div>
-
-  <div class="section">
-    <h2>Stakeholders and Their Priorities</h2>
-    <table>
-      <thead><tr><th>Stakeholder</th><th>Primary Concerns</th><th>Success Metrics</th></tr></thead>
-      <tbody>${stakeholderRows}</tbody>
-    </table>
-  </div>
-
-  ${solutionHtml ? `
-  <div class="section">
-    <h2>Solution Components</h2>
-    ${baselineNote}
-    <ul class="bullets">${solutionHtml}</ul>
-  </div>` : ''}
-</body>
-</html>`)
-
-    win.document.close()
-    win.focus()
-    setTimeout(() => { win.print() }, 400)
+  const navigateApproach = (newIdx: number) => {
+    setSlideDir(newIdx > activeIdx ? 'right' : 'left')
+    setSlideKey(k => k + 1)
+    setActiveIdx(newIdx)
+    setSieveIdx(0)
   }
 
+  const navigateSieve = (newIdx: number) => {
+    setSlideDir(newIdx > sieveIdx ? 'right' : 'left')
+    setSlideKey(k => k + 1)
+    setSieveIdx(newIdx)
+  }
+
+  const updateAF = (field: keyof ApproachFeasibility, value: unknown) => {
+    if (!activeApproach) return
+    onUpdateApproach(activeApproach.id, field, value)
+  }
+
+  const addReg = (name: string) => {
+    if (!activeApproach) return
+    onAddRegulation(activeApproach.id, { id: uid(), name, articles: '' })
+    setNewRegName('')
+  }
+
+  const addCustomQ = () => {
+    if (!newQText.trim()) return
+    onAddCustomQuestion({ id: uid(), text: newQText.trim() })
+    setNewQText('')
+    setShowAddQ(false)
+  }
+
+  if (named.length === 0) {
+    return (
+      <div className="max-w-3xl text-center py-16 text-slate-400">
+        <p className="text-sm">Go back to Step 3 and name your solution approaches first.</p>
+      </div>
+    )
+  }
+
+  const allDecided = named.every(a => feasibility.perApproach[a.id]?.sieveDecision)
+
   return (
-    <div className="space-y-8">
-      {/* ── header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold text-slate-900">Final specification</h2>
-          <p className="mt-2 text-slate-500 text-sm leading-relaxed">
-            Fields pre-filled from your earlier answers — refine until it reads like a professional
-            briefing document. Hit{' '}
-            <strong className="text-slate-700">Preview Document</strong> when ready, then print to
-            PDF.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowPreview(true)}
-          className="shrink-0 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
-        >
-          <FileText className="w-4 h-4" />
-          Preview Document
-        </button>
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-1">Feasibility Assessment</h2>
+        <p className="text-slate-500 text-sm leading-relaxed">
+          Assess each candidate solution independently — data needs, compute, regulations, and
+          whether AI is justified. You&apos;ll pick the winner at the end.
+        </p>
       </div>
 
-      {/* ── form ── */}
-      <div className="grid gap-6 max-w-3xl">
-
-        {/* Project Info */}
-        <Card title="Project Info">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Client / Organisation">
-              <input
-                type="text"
-                value={spec.clientName}
-                onChange={e => onUpdateSpec('clientName', e.target.value)}
-                placeholder="e.g. SwissCredit Bank AG"
-                className={inputCls}
-              />
-            </FormField>
-            <FormField label="Timeline">
-              <input
-                type="text"
-                value={spec.timeline}
-                onChange={e => onUpdateSpec('timeline', e.target.value)}
-                placeholder="e.g. 22 weeks"
-                className={inputCls}
-              />
-            </FormField>
-          </div>
-        </Card>
-
-        {/* Executive Summary */}
-        <Card title="Executive Summary">
-          <p className="text-xs text-slate-400 mb-2">
-            2–3 sentences: who the client is, what the problem costs them, what you&apos;ve been
-            tasked with building.
-          </p>
-          <textarea
-            rows={5}
-            value={spec.executiveSummary}
-            onChange={e => onUpdateSpec('executiveSummary', e.target.value)}
-            className={inputCls}
-          />
-        </Card>
-
-        {/* Business Challenge */}
-        <Card title="Business Challenge">
-          <p className="text-xs text-slate-400 mb-2">
-            One bullet per pain point — use a{' '}
-            <strong className="text-slate-500">bold label</strong> followed by a quantified impact
-            where possible.
-          </p>
-          <textarea
-            rows={5}
-            value={spec.businessChallengeRaw}
-            onChange={e => onUpdateSpec('businessChallengeRaw', e.target.value)}
-            placeholder={`Processing Delays: Manual reviews take 3–5 days, causing 35% applicant drop-off\nCompetitive Pressure: Digital lenders approve in hours\nRegulatory Exposure: Non-compliance fines reach CHF 10M+`}
-            className={inputCls}
-          />
-        </Card>
-
-        {/* Objectives */}
-        <Card title="Objectives">
-          <p className="text-xs text-slate-400 mb-3">
-            Each objective should be concrete and measurable — &ldquo;Reduce X from A to B&rdquo;.
-          </p>
-          <div className="space-y-2">
-            {spec.objectives.map((obj, i) => (
-              <div key={i} className="flex gap-2 items-center">
-                <span className="text-xs font-semibold text-slate-400 w-5 text-right shrink-0">
-                  {i + 1}.
-                </span>
-                <input
-                  type="text"
-                  value={obj}
-                  onChange={e => onUpdateObjective(i, e.target.value)}
-                  placeholder="e.g. Reduce decision time from 3–5 days to under 30 minutes"
-                  className={inputCls}
-                />
-                {spec.objectives.length > 1 && (
-                  <button
-                    onClick={() => onDeleteObjective(i)}
-                    className="text-slate-300 hover:text-rose-400 transition-colors shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
+      {/* ── Approach tabs ──────────────────────────────────────────────────── */}
+      <div className="flex gap-1.5 flex-wrap">
+        {named.map((a, i) => {
+          const done = !!feasibility.perApproach[a.id]?.sieveDecision
+          return (
             <button
-              onClick={onAddObjective}
-              className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+              key={a.id}
+              onClick={() => navigateApproach(i)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all border-2 ${
+                i === activeIdx
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : done
+                    ? 'bg-white border-emerald-200 text-slate-700 hover:border-emerald-400'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
             >
-              <Plus className="w-3.5 h-3.5" /> Add objective
+              {done && i !== activeIdx && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+              {a.name}
             </button>
-          </div>
-        </Card>
-
-        {/* Data Assets */}
-        <Card title="Data Assets">
-          <p className="text-xs text-slate-400 mb-2">
-            Volume, format, label availability, any gaps or privacy constraints.
-          </p>
-          <textarea
-            rows={4}
-            value={spec.dataAssetsDetail}
-            onChange={e => onUpdateSpec('dataAssetsDetail', e.target.value)}
-            placeholder="e.g. ~10 years of historical loan data (1.2M records in CSV). Each record includes repayment outcome, quarterly credit bureau updates, and demographic indicators."
-            className={inputCls}
-          />
-        </Card>
-
-        {/* Regulatory — read from feasibility, not editable here */}
-        <Card title="Regulatory & Compliance Requirements">
-          {feasibility.regulations.length > 0 ? (
-            <div className="space-y-4">
-              {feasibility.regulations.map(reg => (
-                <div key={reg.id}>
-                  <p className="text-sm font-semibold text-slate-800">{reg.name || '(unnamed)'}</p>
-                  <p className="text-sm text-slate-500 mt-1 leading-relaxed whitespace-pre-wrap">
-                    {reg.articles || <span className="italic text-slate-300">No articles noted yet.</span>}
-                  </p>
-                </div>
-              ))}
-              <p className="text-xs text-slate-400 pt-1 border-t border-slate-100">
-                To edit these, go back to the Feasibility step.
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400 italic">
-              No regulations added yet — go back to the Feasibility step to add them.
-            </p>
-          )}
-        </Card>
-
-        {/* Stakeholders */}
-        <Card title="Stakeholders and Their Priorities">
-          <p className="text-xs text-slate-400 mb-3">
-            Add each stakeholder group, their primary concerns, and the metrics they&apos;d use to
-            judge success.
-          </p>
-          <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_1fr_1fr_2rem] gap-2 px-1">
-              {['Stakeholder', 'Primary Concerns', 'Success Metrics'].map(h => (
-                <p key={h} className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  {h}
-                </p>
-              ))}
-            </div>
-            {spec.stakeholders.map(row => (
-              <div key={row.id} className="grid grid-cols-[1fr_1fr_1fr_2rem] gap-2 items-center">
-                <input
-                  type="text"
-                  value={row.role}
-                  onChange={e => onUpdateStakeholder(row.id, 'role', e.target.value)}
-                  placeholder="e.g. Chief Risk Officer"
-                  className={inputCls}
-                />
-                <input
-                  type="text"
-                  value={row.concerns}
-                  onChange={e => onUpdateStakeholder(row.id, 'concerns', e.target.value)}
-                  placeholder="e.g. Model accuracy"
-                  className={inputCls}
-                />
-                <input
-                  type="text"
-                  value={row.metrics}
-                  onChange={e => onUpdateStakeholder(row.id, 'metrics', e.target.value)}
-                  placeholder="e.g. Default rates"
-                  className={inputCls}
-                />
-                {spec.stakeholders.length > 1 && (
-                  <button
-                    onClick={() => onDeleteStakeholder(row.id)}
-                    className="text-slate-300 hover:text-rose-400 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={onAddStakeholder}
-              className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add stakeholder
-            </button>
-          </div>
-        </Card>
-
-        {/* Solution Components */}
-        <Card title="Solution Components">
-          {baseline && (
-            <div className="flex gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-3 mb-4">
-              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 leading-relaxed">
-                <strong>Baseline comparison flagged.</strong> Include a non-AI reference approach
-                in your pipeline (e.g. rule-based system, logistic regression, or heuristic
-                scorecard) and document how the AI solution outperforms it.
-              </p>
-            </div>
-          )}
-          <p className="text-xs text-slate-400 mb-2">
-            Describe the pipeline components you plan to build.
-          </p>
-          <textarea
-            rows={6}
-            value={spec.solutionComponents}
-            onChange={e => onUpdateSpec('solutionComponents', e.target.value)}
-            placeholder={`Data preprocessing pipeline — handle missing values, outliers, feature engineering\nModel training — compare multiple approaches\nEvaluation framework — statistical + business metrics\nDeployment API — REST endpoint with explanations`}
-            className={inputCls}
-          />
-        </Card>
+          )
+        })}
       </div>
 
-      {/* ── Briefing Preview Modal ── */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center overflow-y-auto py-10 px-4">
-          {/* toolbar */}
-          <div className="fixed top-4 right-4 flex gap-2 z-50">
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-            >
-              <Printer className="w-4 h-4" /> Print / Save PDF
-            </button>
-            <button
-              onClick={() => setShowPreview(false)}
-              className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold px-4 py-2 rounded-lg border border-slate-200 transition-colors"
-            >
-              <X className="w-4 h-4" /> Close
-            </button>
-          </div>
+      {/* ── Per-approach content ───────────────────────────────────────────── */}
+      {activeApproach && (
+        <div key={`${activeApproach.id}-${slideKey}`} className={sieveAnimClass}>
 
-          {/* document */}
-          <div
-            id="briefing-doc"
-            className="bg-white w-full max-w-[794px] min-h-[1123px] shadow-2xl rounded-sm px-[72px] py-[64px] text-slate-900"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-          >
-            <p className="text-right text-sm text-slate-500 mb-10">
-              {new Date().toISOString().slice(0, 10)}
-            </p>
-
-            <h1 className="text-2xl font-normal mb-1">Executive Summary</h1>
-            <p className="italic text-base mb-4 text-slate-700">{problem.title}</p>
-            <div className="flex gap-6 mb-6 text-sm">
-              <span><strong>Client:</strong> {spec.clientName || '—'}</span>
-              <span><strong>Timeline:</strong> {spec.timeline || '—'}</span>
-            </div>
-            <p className="text-sm leading-relaxed mb-8 whitespace-pre-line">{spec.executiveSummary}</p>
-
-            <DocSection title="Business Challenge">
-              <ul className="space-y-1.5">
-                {spec.businessChallengeRaw.split('\n').filter(l => l.trim()).map((line, i) => (
-                  <li key={i} className="text-sm flex gap-2">
-                    <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                    <span className="leading-relaxed">{line.trim()}</span>
-                  </li>
-                ))}
-              </ul>
-            </DocSection>
-
-            <DocSection title="Objectives">
-              <ol className="space-y-1.5">
-                {spec.objectives.filter(o => o.trim()).map((obj, i) => (
-                  <li key={i} className="text-sm flex gap-2">
-                    <span className="font-semibold shrink-0">{i + 1}.</span>
-                    <span className="leading-relaxed">{obj}</span>
-                  </li>
-                ))}
-              </ol>
-            </DocSection>
-
-            <DocSection title="Data Assets">
-              <p className="text-sm leading-relaxed whitespace-pre-line">{spec.dataAssetsDetail || '—'}</p>
-            </DocSection>
-
-            <DocSection title="Regulatory & Compliance Requirements">
-              {feasibility.regulations.length > 0 ? (
-                <div className="space-y-4">
-                  {feasibility.regulations.map(reg => (
-                    <div key={reg.id}>
-                      <p className="text-sm font-bold">{reg.name}</p>
-                      {reg.articles && (
-                        <p className="text-sm leading-relaxed mt-0.5 whitespace-pre-line">{reg.articles}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 italic">No regulations specified.</p>
-              )}
-            </DocSection>
-
-            <DocSection title="Stakeholders and Their Priorities">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-slate-300">
-                    {['Stakeholder', 'Primary Concerns', 'Success Metrics'].map(h => (
-                      <th key={h} className="text-left py-2 pr-4 font-bold text-slate-800">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {spec.stakeholders.filter(r => r.role.trim()).map(row => (
-                    <tr key={row.id} className="border-b border-slate-100">
-                      <td className="py-2 pr-4 font-semibold align-top">{row.role}</td>
-                      <td className="py-2 pr-4 align-top">{row.concerns}</td>
-                      <td className="py-2 align-top">{row.metrics}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </DocSection>
-
-            {spec.solutionComponents && (
-              <DocSection title="Solution Components">
-                <ul className="space-y-1.5">
-                  {spec.solutionComponents.split('\n').filter(l => l.trim()).map((line, i) => (
-                    <li key={i} className="text-sm flex gap-2">
-                      <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                      <span className="leading-relaxed">{line.trim()}</span>
-                    </li>
-                  ))}
-                </ul>
-              </DocSection>
+          {/* Approach recap */}
+          <div className="bg-slate-50 rounded-2xl px-5 py-4 mb-4 border border-slate-100">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Assessing</p>
+            <p className="text-sm font-semibold text-slate-800">{activeApproach.name}</p>
+            {activeApproach.description && (
+              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{activeApproach.description}</p>
             )}
           </div>
+
+          {/* Data assets */}
+          <Card title="Data Assets">
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Data volume &amp; format</label>
+                <textarea rows={3} value={af.dataVolume}
+                  onChange={e => updateAF('dataVolume', e.target.value)}
+                  placeholder="e.g. 5 years of ICU admissions (4,200/yr). Vitals time-series in Epic. Free-text clinical notes."
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Label availability</label>
+                <div className="flex gap-3">
+                  {(['yes', 'partial', 'no'] as const).map(v => (
+                    <label key={v} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-all ${
+                      af.dataLabels === v ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-medium' : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}>
+                      <input type="radio" name={`labels-${activeApproach.id}`} value={v}
+                        checked={af.dataLabels === v} onChange={() => updateAF('dataLabels', v)}
+                        className="accent-indigo-600" />
+                      {v === 'yes' ? 'Fully labelled' : v === 'partial' ? 'Partially labelled' : 'No labels'}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Synthetic data / augmentation</label>
+                <textarea rows={2} value={af.syntheticNote}
+                  onChange={e => updateAF('syntheticNote', e.target.value)}
+                  placeholder="e.g. Class imbalance — SMOTE required. PHI restrictions limit data sharing."
+                  className={inputCls} />
+              </div>
+            </div>
+          </Card>
+
+          {/* Compute */}
+          <Card title="Compute &amp; Infrastructure">
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Available compute / budget</label>
+                <textarea rows={2} value={af.computeBudget}
+                  onChange={e => updateAF('computeBudget', e.target.value)}
+                  placeholder="e.g. On-premise GPU server, no external cloud for patient data."
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Modelling stack / tooling</label>
+                <textarea rows={2} value={af.modelingStack}
+                  onChange={e => updateAF('modelingStack', e.target.value)}
+                  placeholder="e.g. XGBoost, LSTM, BioBERT. Python / PyTorch."
+                  className={inputCls} />
+              </div>
+            </div>
+          </Card>
+
+          {/* Regulations */}
+          <Card title="Regulatory &amp; Compliance Requirements">
+            <p className="text-xs text-slate-400 mb-4">Does this specific approach raise any regulatory obligations?</p>
+            {af.regulations.length > 0 && (
+              <div className="space-y-4 mb-4">
+                {af.regulations.map(reg => (
+                  <div key={reg.id} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input type="text" value={reg.name}
+                        onChange={e => onUpdateRegulation(activeApproach.id, reg.id, 'name', e.target.value)}
+                        placeholder="Regulation name" className={`${inputCls} font-semibold`} />
+                      <button onClick={() => onDeleteRegulation(activeApproach.id, reg.id)}
+                        className="text-slate-300 hover:text-rose-400 transition-colors shrink-0">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <textarea rows={3} value={reg.articles}
+                      onChange={e => onUpdateRegulation(activeApproach.id, reg.id, 'articles', e.target.value)}
+                      placeholder="Specific articles, requirements, or obligations that apply…"
+                      className={inputCls} />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <input type="text" value={newRegName} onChange={e => setNewRegName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && newRegName.trim() && addReg(newRegName.trim())}
+                  placeholder="Regulation name" className={inputCls} />
+                <button onClick={() => newRegName.trim() && addReg(newRegName.trim())} disabled={!newRegName.trim()}
+                  className="flex items-center gap-1 shrink-0 text-xs font-semibold text-indigo-600 border border-indigo-200 px-3 py-2 rounded-lg disabled:opacity-30 transition hover:bg-indigo-50">
+                  <Plus className="w-3.5 h-3.5" /> Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_REGS.filter(r => !af.regulations.some(e => e.name === r)).map(r => (
+                  <button key={r} onClick={() => addReg(r)}
+                    className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-full transition-colors">
+                    + {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* AI Sieve */}
+          <Card title="AI Sieve">
+            <p className="text-xs text-slate-400 mb-5">
+              Is AI justified for <strong className="text-slate-600">{activeApproach.name}</strong>?
+            </p>
+
+            {sieveQ && (
+              <div className="relative">
+                <div key={`${activeApproach.id}-sieve-${sieveIdx}`} className={sieveAnimClass !== '' ? sieveAnimClass : ''}>
+                  <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                        Question {sieveIdx + 1} of {allQuestions.length}
+                      </p>
+                      {!sieveQ.isDefault && (
+                        <button onClick={() => { onDeleteCustomQuestion(sieveQ.id); setSieveIdx(Math.max(0, sieveIdx - 1)) }}
+                          className="text-slate-300 hover:text-rose-400 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800 mb-1 leading-snug">{sieveQ.text}</p>
+                    {sieveQ.detail && <p className="text-xs text-slate-500 mb-4 leading-relaxed">{sieveQ.detail}</p>}
+                    <div className="flex gap-3">
+                      {[true, false].map(val => (
+                        <button key={String(val)}
+                          onClick={() => onUpdateSieveAnswer(activeApproach.id, sieveQ.id, val)}
+                          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                            af.sieveAnswers[sieveQ.id] === val
+                              ? val ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-rose-400 bg-rose-50 text-rose-700'
+                              : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                          }`}>
+                          {val ? 'Yes' : 'No'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-4">
+                  <button onClick={() => navigateSieve(sieveIdx - 1)} disabled={sieveIdx === 0}
+                    className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-30 transition-colors">
+                    <ChevronLeft className="w-4 h-4" /> Previous
+                  </button>
+                  <div className="flex gap-1.5">
+                    {allQuestions.map((_, i) => (
+                      <button key={i} onClick={() => navigateSieve(i)}
+                        className={`w-2 h-2 rounded-full transition-colors ${i === sieveIdx ? 'bg-indigo-600' : 'bg-slate-200 hover:bg-slate-300'}`} />
+                    ))}
+                  </div>
+                  <button onClick={() => navigateSieve(sieveIdx + 1)} disabled={sieveIdx === allQuestions.length - 1}
+                    className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-30 transition-colors">
+                    Next <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showAddQ ? (
+              <div className="mt-4 flex gap-2">
+                <input type="text" value={newQText} onChange={e => setNewQText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCustomQ()}
+                  placeholder="Custom sieve question…" className={`${inputCls} flex-1`} autoFocus />
+                <button onClick={addCustomQ} disabled={!newQText.trim()}
+                  className="text-xs font-semibold text-indigo-600 border border-indigo-200 px-3 py-2 rounded-lg disabled:opacity-30 hover:bg-indigo-50 transition">
+                  Add
+                </button>
+                <button onClick={() => setShowAddQ(false)} className="text-xs text-slate-400 hover:text-slate-600 px-2">Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setShowAddQ(true)}
+                className="mt-4 flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                <Plus className="w-3.5 h-3.5" /> Add custom question
+              </button>
+            )}
+
+            {/* Per-approach decision */}
+            <div className="mt-6 pt-5 border-t border-slate-100">
+              <p className="text-sm font-semibold text-slate-700 mb-3">Is AI justified for this approach?</p>
+              <div className="flex gap-3 flex-wrap">
+                {[
+                  { val: 'ai' as const, label: 'Yes — AI is well-suited', cls: 'border-indigo-400 bg-indigo-50 text-indigo-700' },
+                  { val: 'non-ai' as const, label: 'No — a non-AI solution is better', cls: 'border-amber-400 bg-amber-50 text-amber-700' },
+                ].map(({ val, label, cls }) => (
+                  <button key={val}
+                    onClick={() => updateAF('sieveDecision', af.sieveDecision === val ? null : val)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                      af.sieveDecision === val ? cls : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {af.sieveDecision === 'ai' && (
+                <label className="mt-3 flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={af.sieveBaseline}
+                    onChange={e => updateAF('sieveBaseline', e.target.checked)}
+                    className="accent-indigo-600 w-4 h-4" />
+                  Flag for baseline comparison — include a non-AI reference in the final spec
+                </label>
+              )}
+            </div>
+          </Card>
         </div>
       )}
+
+      {/* ── Final selection (shown after all approaches assessed) ─────────── */}
+      <div className={`rounded-2xl border-2 p-6 transition-all ${allDecided ? 'border-indigo-200 bg-indigo-50/50' : 'border-dashed border-slate-200'}`}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${allDecided ? 'bg-indigo-100' : 'bg-slate-100'}`}>
+            <CheckCircle2 className={`w-4 h-4 ${allDecided ? 'text-indigo-600' : 'text-slate-300'}`} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Choose the approach to take forward</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {allDecided
+                ? 'All approaches assessed. Select the one your team is building.'
+                : `Complete the sieve for all ${named.length} approaches first.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {named.map(a => {
+            const apf = feasibility.perApproach[a.id]
+            const decided = !!apf?.sieveDecision
+            return (
+              <label key={a.id} className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                feasibility.chosenApproachId === a.id
+                  ? 'border-indigo-300 bg-white shadow-sm'
+                  : decided ? 'border-slate-200 bg-white hover:border-slate-300' : 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+              }`}>
+                <input type="radio" name="chosen" disabled={!decided}
+                  checked={feasibility.chosenApproachId === a.id}
+                  onChange={() => onUpdate('chosenApproachId', a.id)}
+                  className="mt-0.5 accent-indigo-600 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-slate-800">{a.name}</p>
+                    {apf?.sieveDecision && (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        apf.sieveDecision === 'ai' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {apf.sieveDecision === 'ai' ? 'AI-suited' : 'Non-AI'}
+                      </span>
+                    )}
+                    {apf?.sieveBaseline && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                        + baseline
+                      </span>
+                    )}
+                  </div>
+                  {a.description && <p className="text-xs text-slate-400 mt-0.5 leading-relaxed truncate">{a.description}</p>}
+                </div>
+              </label>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-4">
       <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50">
         <p className="text-sm font-semibold text-slate-700">{title}</p>
       </div>
@@ -525,23 +403,4 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</label>
-      {children}
-    </div>
-  )
-}
-
-function DocSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-6">
-      <h2 className="text-base font-bold mb-2 text-slate-900 border-b border-slate-200 pb-1">{title}</h2>
-      {children}
-    </div>
-  )
-}
-
-const inputCls =
-  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none transition'
+const inputCls = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none transition'

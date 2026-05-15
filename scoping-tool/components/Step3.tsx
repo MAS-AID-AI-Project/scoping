@@ -1,251 +1,198 @@
 'use client'
 
-import { Plus, Trash2 } from 'lucide-react'
-import { uid, SUGGESTED_REGS, type Problem, type FeasibilityEntry, type RegEntry } from '@/lib/types'
+import React from 'react'
+import { Plus, Trash2, X, Box } from 'lucide-react'
+import type { SolutionSpace, SolutionApproach } from '@/lib/types'
 
 interface Props {
-  keptProblems: Problem[]
-  feasibility: Record<string, FeasibilityEntry>
-  selectedId: string | null
-  onUpdate: (id: string, field: keyof FeasibilityEntry, value: unknown) => void
-  onSelect: (id: string) => void
+  solutionSpace: SolutionSpace
+  onUpdate: (field: string, value: unknown) => void
+  onUpdateApproach: (id: string, field: keyof SolutionApproach, value: string) => void
+  onAddApproach: () => void
+  onDeleteApproach: (id: string) => void
 }
 
-const emptyFe = (): FeasibilityEntry => ({
-  dataVolume: '',
-  dataLabels: '',
-  syntheticDataNote: '',
-  computeBudget: '',
-  modelingStack: '',
-  regulations: [],
-})
+export default function Step3({ solutionSpace, onUpdate, onUpdateApproach, onAddApproach, onDeleteApproach }: Props) {
+  const { inputs, outputs } = solutionSpace
 
-export default function Step3({ keptProblems, feasibility, selectedId, onUpdate, onSelect }: Props) {
+  const addInput    = () => onUpdate('inputs',  [...inputs, ''])
+  const addOutput   = () => onUpdate('outputs', [...outputs, ''])
+  const updateInput  = (i: number, v: string) => onUpdate('inputs',  inputs.map((x, j) => j === i ? v : x))
+  const updateOutput = (i: number, v: string) => onUpdate('outputs', outputs.map((x, j) => j === i ? v : x))
+  const deleteInput  = (i: number) => onUpdate('inputs',  inputs.filter((_, j) => j !== i))
+  const deleteOutput = (i: number) => onUpdate('outputs', outputs.filter((_, j) => j !== i))
+
   return (
-    <div className="space-y-8">
-      <div className="max-w-2xl">
-        <h2 className="text-2xl font-semibold text-slate-900">Feasibility deep-dive</h2>
-        <p className="mt-2 text-slate-500 text-sm leading-relaxed">
-          Compare your remaining candidates across three dimensions: data, technical readiness,
-          and regulatory constraints. Then{' '}
-          <strong className="text-slate-700">select the single most feasible problem</strong> to
-          take forward.
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-1">Solution Space</h2>
+        <p className="text-slate-500 text-sm leading-relaxed">
+          Define the system as a black box first — add each input and output as a separate item —
+          then brainstorm 3–4 distinct approaches. Don&apos;t commit to AI yet.
         </p>
       </div>
 
-      <div
-        className={`grid gap-5 items-start ${
-          keptProblems.length === 1
-            ? 'max-w-lg'
-            : keptProblems.length === 2
-            ? 'grid-cols-2'
-            : 'grid-cols-3'
-        }`}
-      >
-        {keptProblems.map(p => {
-          const fe: FeasibilityEntry = feasibility[p.id] ?? emptyFe()
-          const isSelected = selectedId === p.id
+      {/* ── Black-box diagram editor ─────────────────────────────────────── */}
+      <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+        <div className="flex items-stretch min-h-[160px]">
 
-          const updateRegs = (regs: RegEntry[]) => onUpdate(p.id, 'regulations', regs)
+          {/* Input column */}
+          <div className="flex-1 flex flex-col justify-center gap-2 p-5 bg-indigo-50/60">
+            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-0.5">Inputs</p>
 
-          const addReg = (name = '') => {
-            updateRegs([...fe.regulations, { id: uid(), name, articles: '' }])
-          }
-
-          const updateReg = (regId: string, field: keyof RegEntry, value: string) => {
-            updateRegs(fe.regulations.map(r => r.id === regId ? { ...r, [field]: value } : r))
-          }
-
-          const removeReg = (regId: string) => {
-            updateRegs(fe.regulations.filter(r => r.id !== regId))
-          }
-
-          return (
-            <div
-              key={p.id}
-              className={[
-                'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200',
-                isSelected
-                  ? 'border-indigo-400 ring-2 ring-indigo-100'
-                  : 'border-slate-100 hover:border-slate-300',
-              ].join(' ')}
-            >
-              {/* column header */}
-              <div className={`px-4 py-3 border-b ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-50 border-slate-100'}`}>
-                <p className={`font-semibold text-sm truncate ${isSelected ? 'text-white' : 'text-slate-800'}`}>
-                  {p.title || '(Untitled)'}
-                </p>
-              </div>
-
-              <div className="p-4 space-y-5">
-
-                {/* ── Data Readiness ── */}
-                <Section title="Data Readiness">
-                  <Field label="Volume / Description">
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. 1.2M records in CSV, 10 years of history"
-                      value={fe.dataVolume}
-                      onChange={e => onUpdate(p.id, 'dataVolume', e.target.value)}
-                      className={inputCls}
-                    />
-                  </Field>
-                  <Field label="Labelled data available?">
-                    <div className="flex gap-2 flex-wrap">
-                      {(['yes', 'partial', 'no'] as const).map(v => (
-                        <button
-                          key={v}
-                          onClick={() => onUpdate(p.id, 'dataLabels', fe.dataLabels === v ? '' : v)}
-                          className={[
-                            'px-3 py-1 rounded-lg text-xs font-medium border transition-all capitalize',
-                            fe.dataLabels === v
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300',
-                          ].join(' ')}
-                        >
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  </Field>
-                  <Field label="Synthetic data viable?">
-                    <textarea
-                      rows={2}
-                      placeholder="If real data is sparse or restricted, is synthetic generation an option?"
-                      value={fe.syntheticDataNote}
-                      onChange={e => onUpdate(p.id, 'syntheticDataNote', e.target.value)}
-                      className={inputCls}
-                    />
-                  </Field>
-                </Section>
-
-                {/* ── Technical Readiness ── */}
-                <Section title="Technical Readiness">
-                  <Field label="Compute budget">
-                    <input
-                      type="text"
-                      placeholder="e.g. GPU cluster, cloud credits, CPU only"
-                      value={fe.computeBudget}
-                      onChange={e => onUpdate(p.id, 'computeBudget', e.target.value)}
-                      className={inputCls}
-                    />
-                  </Field>
-                  <Field label="Modelling stack / architectures">
-                    <input
-                      type="text"
-                      placeholder="e.g. PyTorch + HuggingFace, Scikit-learn, XGBoost"
-                      value={fe.modelingStack}
-                      onChange={e => onUpdate(p.id, 'modelingStack', e.target.value)}
-                      className={inputCls}
-                    />
-                  </Field>
-                </Section>
-
-                {/* ── Regulatory & Compliance ── */}
-                <Section title="Regulatory & Compliance">
-                  <p className="text-xs text-slate-400 -mt-1 leading-relaxed">
-                    Add each applicable regulation and note the specific articles or
-                    sub-requirements that constrain your design.
-                  </p>
-
-                  {/* regulation entries */}
-                  <div className="space-y-3">
-                    {fe.regulations.map(reg => (
-                      <div
-                        key={reg.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2"
-                      >
-                        <div className="flex gap-2 items-center">
-                          <input
-                            type="text"
-                            value={reg.name}
-                            onChange={e => updateReg(reg.id, 'name', e.target.value)}
-                            placeholder="Regulation name (e.g. EU AI Act)"
-                            className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                          />
-                          <button
-                            onClick={() => removeReg(reg.id)}
-                            className="text-slate-300 hover:text-rose-400 transition-colors shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <textarea
-                          rows={3}
-                          value={reg.articles}
-                          onChange={e => updateReg(reg.id, 'articles', e.target.value)}
-                          placeholder="Specific articles / sub-requirements that apply to this use case…"
-                          className={inputCls}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* add button */}
+            {inputs.map((inp, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {inputs.length > 1 && (
                   <button
-                    onClick={() => addReg()}
-                    className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
+                    onClick={() => deleteInput(i)}
+                    className="shrink-0 text-indigo-200 hover:text-rose-400 transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add regulation
+                    <X className="w-3 h-3" />
                   </button>
+                )}
+                <input
+                  value={inp}
+                  onChange={e => updateInput(i, e.target.value)}
+                  placeholder={`Input ${i + 1}`}
+                  className="flex-1 min-w-0 rounded-md border border-indigo-100 bg-white/90 px-2 py-1.5 text-sm text-slate-800 placeholder:text-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400 transition"
+                />
+                {/* Animated arrow */}
+                <div className="flex items-center shrink-0 gap-0">
+                  <div className="h-0.5 w-10 arrow-flow-indigo" />
+                  <span className="text-indigo-500 text-[10px] leading-none">▶</span>
+                </div>
+              </div>
+            ))}
 
-                  {/* suggestion chips */}
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-slate-400">Quick-add:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SUGGESTED_REGS.filter(
-                        name => !fe.regulations.some(r => r.name === name)
-                      ).map(name => (
-                        <button
-                          key={name}
-                          onClick={() => addReg(name)}
-                          className="px-2.5 py-1 rounded-full text-xs border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                        >
-                          + {name}
-                        </button>
-                      ))}
-                    </div>
+            <button
+              onClick={addInput}
+              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-600 font-medium mt-1 ml-0.5 transition-colors"
+            >
+              <Plus className="w-3 h-3" /> Add input
+            </button>
+          </div>
+
+          {/* Black box */}
+          <div className="w-28 shrink-0 bg-slate-900 flex flex-col items-center justify-center gap-2 py-6 px-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-700/60 border border-slate-600 flex items-center justify-center">
+              <Box className="w-5 h-5 text-slate-400" />
+            </div>
+            <p className="text-white text-[10px] font-semibold text-center leading-tight tracking-wide">
+              Black Box<br />System
+            </p>
+          </div>
+
+          {/* Output column */}
+          <div className="flex-1 flex flex-col justify-center gap-2 p-5 bg-emerald-50/60">
+            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-0.5">Outputs</p>
+
+            {outputs.map((out, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {/* Animated arrow */}
+                <div className="flex items-center shrink-0 gap-0">
+                  <span className="text-emerald-500 text-[10px] leading-none">▶</span>
+                  <div className="h-0.5 w-10 arrow-flow-emerald" />
+                </div>
+                <input
+                  value={out}
+                  onChange={e => updateOutput(i, e.target.value)}
+                  placeholder={`Output ${i + 1}`}
+                  className="flex-1 min-w-0 rounded-md border border-emerald-100 bg-white/90 px-2 py-1.5 text-sm text-slate-800 placeholder:text-emerald-200 focus:outline-none focus:ring-1 focus:ring-emerald-400 transition"
+                />
+                {outputs.length > 1 && (
+                  <button
+                    onClick={() => deleteOutput(i)}
+                    className="shrink-0 text-emerald-200 hover:text-rose-400 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <button
+              onClick={addOutput}
+              className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-600 font-medium mt-1 transition-colors"
+            >
+              <Plus className="w-3 h-3" /> Add output
+            </button>
+          </div>
+        </div>
+
+        {/* Constraints */}
+        <div className="border-t border-slate-100 px-5 py-3 bg-white flex items-start gap-3">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 shrink-0">Constraints</span>
+          <input
+            type="text"
+            value={solutionSpace.constraints}
+            onChange={e => onUpdate('constraints', e.target.value)}
+            placeholder="e.g. Must run within hospital network. Alert latency ≤ 5 min. No external data storage."
+            className="flex-1 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none py-1.5 bg-transparent"
+          />
+        </div>
+      </div>
+
+      {/* ── Solution approaches ───────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700">Solution Approaches</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              3–4 distinct approaches. Include both AI and non-AI options — don&apos;t filter yet.
+            </p>
+          </div>
+          {solutionSpace.approaches.length < 4 && (
+            <button
+              onClick={onAddApproach}
+              className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add approach
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          {solutionSpace.approaches.map((a, i) => (
+            <div key={a.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-600">Approach {i + 1}</p>
+                {solutionSpace.approaches.length > 2 && (
+                  <button onClick={() => onDeleteApproach(a.id)} className="text-slate-300 hover:text-rose-400 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Name</label>
+                  <input type="text" value={a.name} onChange={e => onUpdateApproach(a.id, 'name', e.target.value)}
+                    placeholder="e.g. Rule-based threshold alerts" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Description</label>
+                  <textarea rows={2} value={a.description} onChange={e => onUpdateApproach(a.id, 'description', e.target.value)}
+                    placeholder="e.g. Hard-coded vital thresholds trigger nurse alerts. No learning from historical data."
+                    className={inputCls} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-emerald-600 uppercase tracking-wide block mb-1">Pros</label>
+                    <textarea rows={2} value={a.pros} onChange={e => onUpdateApproach(a.id, 'pros', e.target.value)}
+                      placeholder="Simple, explainable, no training data required" className={inputCls} />
                   </div>
-                </Section>
-
-                {/* select button */}
-                <button
-                  onClick={() => onSelect(p.id)}
-                  className={[
-                    'w-full py-2.5 rounded-xl text-sm font-semibold border transition-all',
-                    isSelected
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50',
-                  ].join(' ')}
-                >
-                  {isSelected ? '✓ Selected' : 'Select this problem'}
-                </button>
+                  <div>
+                    <label className="text-xs font-semibold text-rose-500 uppercase tracking-wide block mb-1">Cons</label>
+                    <textarea rows={2} value={a.cons} onChange={e => onUpdateApproach(a.id, 'cons', e.target.value)}
+                      placeholder="Misses subtle patterns, high false-positive rate" className={inputCls} />
+                  </div>
+                </div>
               </div>
             </div>
-          )
-        })}
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-3">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{title}</p>
-      {children}
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-slate-600">{label}</p>
-      {children}
-    </div>
-  )
-}
-
-const inputCls =
-  'w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none transition bg-white'
+const inputCls = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none transition'
