@@ -2,7 +2,7 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 9)
 }
 
-export type ProblemId = 'healthcare' | 'finance' | 'services' | 'custom'
+export type ProblemId = 'healthcare' | 'finance' | 'services' | 'loan' | 'custom'
 
 export interface TemplateStakeholder {
   role: string
@@ -58,6 +58,8 @@ export interface SolutionApproach {
   id: string
   name: string
   description: string
+  inputTypes: string
+  outputTypes: string
   pros: string
   cons: string
 }
@@ -113,9 +115,11 @@ export const DEFAULT_SIEVE_QUESTIONS: SieveQuestion[] = [
 
 // Per-approach feasibility (one of these per candidate solution)
 export interface ApproachFeasibility {
+  dataSources: string
   dataVolume: string
   dataLabels: 'yes' | 'partial' | 'no' | ''
-  syntheticNote: string
+  dataQuality: string
+  dataAccess: string
   computeBudget: string
   modelingStack: string
   regulations: RegEntry[]
@@ -132,9 +136,11 @@ export interface FeasibilityData {
 
 export function emptyApproachFeasibility(): ApproachFeasibility {
   return {
+    dataSources: '',
     dataVolume: '',
     dataLabels: '',
-    syntheticNote: '',
+    dataQuality: '',
+    dataAccess: '',
     computeBudget: '',
     modelingStack: '',
     regulations: [],
@@ -150,6 +156,8 @@ export interface SpecData {
   clientName: string
   timeline: string
   executiveSummary: string
+  expectedDataAvailability: string
+  expectedComputeUsage: string
   solutionComponents: string
 }
 
@@ -195,8 +203,8 @@ export function emptySolutionSpace(): SolutionSpace {
     outputs: [''],
     constraints: '',
     approaches: [
-      { id: uid(), name: '', description: '', pros: '', cons: '' },
-      { id: uid(), name: '', description: '', pros: '', cons: '' },
+      { id: uid(), name: '', description: '', inputTypes: '', outputTypes: '', pros: '', cons: '' },
+      { id: uid(), name: '', description: '', inputTypes: '', outputTypes: '', pros: '', cons: '' },
     ],
   }
 }
@@ -214,6 +222,8 @@ export function emptySpec(): SpecData {
     clientName: '',
     timeline: '',
     executiveSummary: '',
+    expectedDataAvailability: '',
+    expectedComputeUsage: '',
     solutionComponents: '',
   }
 }

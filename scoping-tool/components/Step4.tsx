@@ -89,7 +89,7 @@ export default function Step4({
         <h2 className="text-2xl font-semibold text-slate-900 mb-1">Feasibility Assessment</h2>
         <p className="text-slate-500 text-sm leading-relaxed">
           Assess each candidate solution independently — data needs, compute, regulations, and
-          whether AI is justified. You&apos;ll pick the winner at the end.
+          whether AI is justified. You&apos;ll pick the most promising one at the end.
         </p>
       </div>
 
@@ -129,18 +129,30 @@ export default function Step4({
             )}
           </div>
 
-          {/* Data assets */}
+          {/* Data Assets */}
           <Card title="Data Assets">
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Data volume &amp; format</label>
-                <textarea rows={3} value={af.dataVolume}
-                  onChange={e => updateAF('dataVolume', e.target.value)}
-                  placeholder="e.g. 5 years of ICU admissions (4,200/yr). Vitals time-series in Epic. Free-text clinical notes."
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Data sources</label>
+                <textarea rows={2} value={af.dataSources}
+                  onChange={e => updateAF('dataSources', e.target.value)}
+                  placeholder="e.g. Epic EHR (FHIR API) — vitals every 15 min, lab results, medication orders. Hospital admin system — patient demographics."
                   className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Label availability</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Estimated volume</label>
+                <textarea rows={2} value={af.dataVolume}
+                  onChange={e => updateAF('dataVolume', e.target.value)}
+                  placeholder="e.g. 5 years × 4,200 ICU admissions/yr = ~21,000 stays. ~500 vital readings per stay."
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
+                  Label availability
+                  <span className="ml-2 text-slate-400 font-normal normal-case tracking-normal">
+                    (not required for unsupervised approaches)
+                  </span>
+                </label>
                 <div className="flex gap-3">
                   {(['yes', 'partial', 'no'] as const).map(v => (
                     <label key={v} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-all ${
@@ -149,16 +161,23 @@ export default function Step4({
                       <input type="radio" name={`labels-${activeApproach.id}`} value={v}
                         checked={af.dataLabels === v} onChange={() => updateAF('dataLabels', v)}
                         className="accent-indigo-600" />
-                      {v === 'yes' ? 'Fully labelled' : v === 'partial' ? 'Partially labelled' : 'No labels'}
+                      {v === 'yes' ? 'Fully labelled' : v === 'partial' ? 'Partially labelled' : 'No labels / unsupervised'}
                     </label>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Synthetic data / augmentation</label>
-                <textarea rows={2} value={af.syntheticNote}
-                  onChange={e => updateAF('syntheticNote', e.target.value)}
-                  placeholder="e.g. Class imbalance — SMOTE required. PHI restrictions limit data sharing."
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Data quality &amp; gaps</label>
+                <textarea rows={2} value={af.dataQuality}
+                  onChange={e => updateAF('dataQuality', e.target.value)}
+                  placeholder="e.g. Class imbalance (~12.5% positive events). Missing vitals during transport. Some lab values absent for ~18% of admissions."
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Privacy &amp; access restrictions</label>
+                <textarea rows={2} value={af.dataAccess}
+                  onChange={e => updateAF('dataAccess', e.target.value)}
+                  placeholder="e.g. PHI — all data must remain within hospital network. Epic FHIR API access requires IT and DPO sign-off. No data sharing with external APIs."
                   className={inputCls} />
               </div>
             </div>
@@ -185,8 +204,10 @@ export default function Step4({
           </Card>
 
           {/* Regulations */}
-          <Card title="Regulatory &amp; Compliance Requirements">
-            <p className="text-xs text-slate-400 mb-4">Does this specific approach raise any regulatory obligations?</p>
+          <Card title="Regulatory &amp; Compliance Considerations">
+            <p className="text-xs text-slate-400 mb-4">
+              For each relevant regulation, identify <strong className="text-slate-500">which parts of your data pipeline and solution</strong> need compliance review — e.g. data collection, training, inference, human oversight, storage. You don&apos;t need to cite specific articles.
+            </p>
             {af.regulations.length > 0 && (
               <div className="space-y-4 mb-4">
                 {af.regulations.map(reg => (
@@ -202,7 +223,7 @@ export default function Step4({
                     </div>
                     <textarea rows={3} value={reg.articles}
                       onChange={e => onUpdateRegulation(activeApproach.id, reg.id, 'articles', e.target.value)}
-                      placeholder="Specific articles, requirements, or obligations that apply…"
+                      placeholder="e.g. Data collection — patient consent required. Training — PHI must not leave hospital network. Inference — automated decisions must allow human override."
                       className={inputCls} />
                   </div>
                 ))}
@@ -342,7 +363,7 @@ export default function Step4({
             <CheckCircle2 className={`w-4 h-4 ${allDecided ? 'text-indigo-600' : 'text-slate-300'}`} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-800">Choose the approach to take forward</p>
+            <p className="text-sm font-semibold text-slate-800">Choose the most promising approach to start with</p>
             <p className="text-xs text-slate-400 mt-0.5">
               {allDecided
                 ? 'All approaches assessed. Select the one your team is building.'

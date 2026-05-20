@@ -1,6 +1,6 @@
 import type { TeamState } from './types'
 
-export const PREFILLED_STATE: TeamState = {
+export const PREFILLED_HEALTHCARE: TeamState = {
   problemId: 'healthcare',
   customTitle: '',
   customContext: '',
@@ -67,7 +67,7 @@ export const PREFILLED_STATE: TeamState = {
         inputTypes: 'Tabular snapshot: current vital signs + selected lab values. No historical sequence required.',
         outputTypes: 'Categorical risk tier (Low / Medium / High) and total score (integer 0–20+). No probabilistic estimate.',
         pros: 'Fully transparent and auditable; no training data needed; easiest regulatory path; nurses already familiar with NEWS; fast to deploy',
-        cons: 'Cannot learn from historical patterns; fixed thresholds poorly suited to ICU patients at chronically elevated baselines; limited sensitivity ceiling (~65%)',
+        cons: 'Cannot learn from historical patterns; fixed thresholds poorly suited to ICU patients at chronically elevated baselines; sensitivity ceiling ~65%',
       },
       {
         id: 'ap2',
@@ -128,9 +128,9 @@ export const PREFILLED_STATE: TeamState = {
         computeBudget: 'Training: on-premise research server (1 × NVIDIA P100, 16 GB VRAM). Estimated training time 3–5 hours per run. Inference: runs every 15 min across all active ICU patients; ~2 ms per patient at 80-bed capacity. Negligible additional infrastructure cost.',
         modelingStack: 'Python: pandas, scikit-learn, XGBoost, SHAP, imbalanced-learn. Scheduled inference via cron job on Epic integration server. Alerts delivered via Epic SMART-on-FHIR notification API.',
         regulations: [
-          { id: 'r2a', name: 'EU AI Act', articles: 'Classification — likely high-risk AI (Annex I: medical device software influencing clinical decisions). Training — risk management system (Art. 9) and data governance documentation (Art. 10) required before deployment. Inference — human oversight mandatory (Art. 14); nurses must be able to override and dismiss alerts. Post-market monitoring (Art. 72) must be designed into the system from the start.' },
-          { id: 'r2b', name: 'GDPR', articles: 'Data collection — ICU vitals are special category health data (Art. 9); lawful basis required (legitimate interest for patient safety or explicit consent). Training — retrospective data must be pseudonymised before model development. Inference — alert system is decision support for clinicians, not autonomous decision-making; Art. 22 does not apply directly.' },
-          { id: 'r2c', name: 'HL7 FHIR', articles: 'Data pipeline — FHIR API calls must include audit logging (who accessed what, when). Rate limits on Epic FHIR must be respected within the 15-minute polling cycle. Any write-back of alert data to Epic requires approved FHIR write endpoints and IT sign-off.' },
+          { id: 'r2a', name: 'EU AI Act', articles: 'Classification — likely high-risk AI (Annex I: medical device software influencing clinical decisions). Training — risk management and data governance documentation required before deployment. Inference — human oversight mandatory; nurses must be able to override and dismiss alerts. Post-market monitoring must be designed in from the start.' },
+          { id: 'r2b', name: 'GDPR', articles: 'Data collection — ICU vitals are special category health data (Art. 9); lawful basis required (legitimate interest for patient safety). Training — retrospective data must be pseudonymised before model development. Inference — alert system is decision support for clinicians, not autonomous decision-making.' },
+          { id: 'r2c', name: 'HL7 FHIR', articles: 'Data pipeline — FHIR API calls must include audit logging. Rate limits on Epic FHIR must be respected within the 15-minute polling cycle. Any write-back of alert data to Epic requires approved FHIR write endpoints and IT sign-off.' },
         ],
         sieveAnswers: { 'sq-1': false, 'sq-2': true, 'sq-3': true },
         sieveDecision: 'ai',
@@ -138,31 +138,31 @@ export const PREFILLED_STATE: TeamState = {
       },
       'ap3': {
         dataSources: 'Same Epic FHIR sources as XGBoost. Raw vital sign sequences needed in their time-series form — no feature engineering step.',
-        dataVolume: 'Same 21,000 stays. Each stay represented as a padded matrix: 192 time steps × 6 vital features. Total: ~2.4 GB of sequence data after preprocessing.',
+        dataVolume: 'Same 21,000 stays. Each stay as a padded matrix: 192 time steps × 6 vital features. Total: ~2.4 GB of sequence data after preprocessing.',
         dataLabels: 'yes',
-        dataQuality: 'Missing time steps (transport gaps) handled via masking in LSTM. Same class imbalance as XGBoost — use weighted loss function. 21,000 stays is on the smaller side for LSTM generalisation; risk of overfitting on the minority class.',
+        dataQuality: 'Missing time steps handled via masking. Same class imbalance as XGBoost — use weighted loss function. 21,000 stays is on the smaller side for LSTM generalisation; risk of overfitting on the minority class.',
         dataAccess: 'Same PHI and network constraints as XGBoost. Sequence data is more memory-intensive; larger storage footprint on the on-premise server.',
-        computeBudget: 'Training: GPU required (P100 available). Estimated training time 4–6 hours per run. Inference: ~15 ms per patient — within 2-minute latency requirement but 7× slower than XGBoost. Memory footprint significantly larger.',
+        computeBudget: 'Training: GPU required (P100 available). ~4–6 hours per run. Inference: ~15 ms per patient — within 2-minute latency requirement but slower than XGBoost.',
         modelingStack: 'Python: PyTorch, PyTorch Lightning. LSTM with attention. Model registry: MLflow. Explainability via attention weights — no SHAP equivalent out of the box.',
         regulations: [
-          { id: 'r3a', name: 'EU AI Act', articles: 'Classification — same high-risk classification as XGBoost. Explainability (Art. 14) is harder to satisfy: attention weights are not as interpretable as SHAP feature attributions. Higher documentation burden to justify approach to clinical and regulatory reviewers.' },
-          { id: 'r3b', name: 'GDPR', articles: 'Same data governance requirements as XGBoost. No additional risk from the sequence format beyond a larger data footprint on the integration server.' },
+          { id: 'r3a', name: 'EU AI Act', articles: 'Same high-risk classification as XGBoost. Explainability requirement harder to satisfy: attention weights are not as interpretable as SHAP feature attributions. Higher documentation burden.' },
+          { id: 'r3b', name: 'GDPR', articles: 'Same data governance requirements as XGBoost. No additional risk from the sequence format beyond a larger data footprint.' },
         ],
         sieveAnswers: { 'sq-1': false, 'sq-2': true, 'sq-3': true },
         sieveDecision: 'ai',
         sieveBaseline: false,
       },
       'ap4': {
-        dataSources: 'Same vital signs + lab data as XGBoost, PLUS free-text clinical notes extracted from Epic ClinicalImpression and DiagnosticReport resources. Requires a separate NLP preprocessing pipeline.',
-        dataVolume: 'Vital sequence data: ~2.4 GB (same as LSTM). Clinical notes: ~3–5 notes per day × 5.2-day avg stay = ~20 notes per admission × 21,000 stays × ~150 words each ≈ 63M tokens.',
+        dataSources: 'Same vital signs + lab data as XGBoost, PLUS free-text clinical notes from Epic ClinicalImpression and DiagnosticReport resources. Requires a separate NLP preprocessing and de-identification pipeline.',
+        dataVolume: 'Vital sequence data: ~2.4 GB. Clinical notes: ~20 notes per admission × 21,000 stays × ~150 words ≈ 63M tokens.',
         dataLabels: 'yes',
-        dataQuality: 'Clinical notes vary significantly in structure and quality across departments and shifts. Named entity recognition required to normalise medication and diagnosis mentions. Highest data preprocessing burden of all approaches.',
-        dataAccess: 'Free-text clinical notes may contain PHI beyond structured fields (patient names, dates, indirect identifiers in narrative). A validated de-identification pipeline is required before any training. This substantially increases compliance complexity versus structured-data approaches.',
-        computeBudget: 'Training: multi-GPU strongly preferred (P100 is borderline). Fine-tuning BioClinicalBERT alone: ~12 hours per run; joint training significantly longer. Inference: ~80–120 ms per patient — may not meet 2-minute alert latency at peak census.',
-        modelingStack: 'Python: PyTorch, HuggingFace Transformers (BioClinicalBERT), custom temporal encoder. Very high engineering complexity. No standard clinical explainability framework compatible out of the box.',
+        dataQuality: 'Clinical notes vary significantly in structure and quality across departments and shifts. Named entity recognition required. A validated de-identification pipeline is required before any training — substantially increases compliance complexity.',
+        dataAccess: 'Free-text clinical notes may contain PHI beyond structured fields. De-identification pipeline must be audited and validated. Largest attack surface for re-identification of all approaches.',
+        computeBudget: 'Training: multi-GPU strongly preferred. Fine-tuning BioClinicalBERT alone: ~12 hours per run; joint training significantly longer. Inference: ~80–120 ms per patient — may not meet 2-minute alert latency at peak census.',
+        modelingStack: 'Python: PyTorch, HuggingFace Transformers (BioClinicalBERT), custom temporal encoder. Very high engineering complexity.',
         regulations: [
-          { id: 'r4a', name: 'EU AI Act', articles: 'Classification — high-risk, same as XGBoost and LSTM. Explainability (Art. 14) is most challenging: transformer attention maps are not clinically interpretable. Highest documentation burden; most likely to face regulatory pushback without extensive additional work.' },
-          { id: 'r4b', name: 'GDPR', articles: 'Data collection — clinical notes contain unstructured PHI; a validated de-identification pipeline must be audited before use. Training — larger attack surface for re-identification via model memorisation; differential privacy techniques may be required. Storage — combined dataset has the largest footprint and retention scope.' },
+          { id: 'r4a', name: 'EU AI Act', articles: 'Same high-risk classification. Explainability most challenging — transformer attention maps are not clinically interpretable. Highest documentation burden; most likely to face regulatory pushback.' },
+          { id: 'r4b', name: 'GDPR', articles: 'Clinical notes contain unstructured PHI; a validated de-identification pipeline must be audited before use. Larger attack surface for re-identification via model memorisation; differential privacy techniques may be required.' },
         ],
         sieveAnswers: { 'sq-1': false, 'sq-2': true, 'sq-3': true },
         sieveDecision: 'ai',
@@ -175,12 +175,12 @@ export const PREFILLED_STATE: TeamState = {
     clientName: 'Regional Medical Centre',
     timeline: '20 weeks',
     executiveSummary:
-      'Regional Medical Centre operates an 80-bed ICU admitting ~4,200 patients per year. Approximately 12.5% of patients experience an unexpected deterioration event — sepsis, respiratory failure, or cardiac arrest — many of which leave a detectable signal in Epic 4–8 hours before a clinical emergency. Currently no automated early warning tool exists; nurses rely on manual observation and single-parameter bedside alarms that detect crises only after they have already begun.\n\nWe propose an XGBoost-based ICU early warning system that continuously scores each patient\'s deterioration risk from engineered features derived from 48-hour vital sign histories and lab results. Alerts are delivered to nurses via the Epic SMART-on-FHIR notification interface with SHAP-based explanations showing the top contributing clinical features. A rule-based augmented NEWS2 score is included as a baseline for regulatory comparison.',
+      'Regional Medical Centre operates an 80-bed ICU admitting ~4,200 patients per year. Approximately 12.5% of patients experience an unexpected deterioration event — many of which leave a detectable signal in Epic 4–8 hours before a clinical emergency. Currently no automated early warning tool exists; nurses rely on manual observation and single-parameter bedside alarms that detect crises only after they have already begun.\n\nWe propose an XGBoost-based ICU early warning system that continuously scores each patient\'s deterioration risk from engineered features derived from 48-hour vital sign histories and lab results. Alerts are delivered to nurses via the Epic SMART-on-FHIR notification interface with SHAP-based explanations. A rule-based augmented NEWS2 score is included as a baseline for regulatory comparison.',
     expectedDataAvailability:
-      'Retrospective training data: ~21,000 de-identified ICU admissions from 5 years of Epic records, accessible via FHIR API subject to IT and Data Protection Officer sign-off. Data export estimated within 6 weeks of project start.\nReal-time inference data: Epic FHIR Observation and DiagnosticReport streams available once IT provisions API credentials (estimated 2-week lead time). Lab results have a typical reporting lag of 45–90 minutes.\nKnown gaps: Lactate and platelet values absent for ~18% of admissions. Transport-related vital sign gaps (~8% of time steps) will be handled by forward-fill imputation with a missingness indicator. Outcome labels (deterioration events) derived from Epic emergency code records — no near-miss events are currently documented.',
+      'Retrospective training data: ~21,000 de-identified ICU admissions from 5 years of Epic records, accessible via FHIR API subject to IT and DPO sign-off (estimated 6-week lead time).\nReal-time inference: Epic FHIR Observation and DiagnosticReport streams available once IT provisions API credentials (~2-week lead time). Lab results have a typical reporting lag of 45–90 minutes.\nKnown gaps: Lactate and platelet values absent for ~18% of admissions. Transport-related vital sign gaps (~8% of time steps) will be handled by forward-fill imputation with a missingness indicator. Outcome labels derived from Epic emergency code records — near-miss events not currently documented.',
     expectedComputeUsage:
-      'Training: hospital IT research GPU server (1 × NVIDIA P100, 16 GB VRAM). Estimated training time 3–5 hours per XGBoost run including feature engineering. Retraining cadence: quarterly or triggered by statistical drift detection.\nInference: scheduled scoring every 15 minutes across all active ICU patients. At full 80-bed capacity: ~2 ms × 80 patients < 200 ms per scoring cycle. Runs on the existing Epic integration server — no additional hardware required.\nStorage: feature engineering artefacts and model checkpoints require ~50 GB on the hospital NAS. Processed feature vectors retained for 24 months for model monitoring.',
+      'Training: hospital IT research GPU server (1 × NVIDIA P100, 16 GB VRAM). Estimated training time 3–5 hours per XGBoost run. Retraining cadence: quarterly or triggered by drift detection.\nInference: scheduled every 15 minutes across all active ICU patients. At full 80-bed capacity: ~2 ms × 80 patients < 200 ms per scoring cycle. Runs on the existing Epic integration server — no additional hardware required.\nStorage: feature engineering artefacts and model checkpoints: ~50 GB on hospital NAS.',
     solutionComponents:
-      'Feature Engineering Pipeline — extract ~80 statistical features (mean, std, trend slope, time-since-last-abnormal) from 48-hour vital sign windows per patient; re-computed every 15 minutes via cron job\nXGBoost Risk Scoring Model — trained on 5 years of labelled ICU admissions; class-weighted training for ~12.5% event rate; AUC-ROC target ≥ 0.85\nNEWS2 Augmented Baseline — rule-based score extended with ICU-specific parameters; regulatory reference and clinical comparison\nSHAP Explanation Layer — top-3 contributing features per alert; displayed alongside risk score in nurse dashboard\nEpic SMART-on-FHIR Integration — real-time alert delivery to nurse workstations via Epic notification API; nurses can acknowledge or escalate\nDrift Monitoring — weekly statistical comparison of score distribution and feature distributions vs training baseline; automated report to IT and clinical lead',
+      'Feature Engineering Pipeline — extract ~80 statistical features (mean, std, trend slope, time-since-last-abnormal) from 48-hour vital sign windows; re-computed every 15 minutes\nXGBoost Risk Scoring Model — trained on 5 years of labelled ICU admissions; class-weighted training; AUC-ROC target ≥ 0.85\nNEWS2 Augmented Baseline — rule-based score extended with ICU-specific parameters; regulatory reference and clinical comparison\nSHAP Explanation Layer — top-3 contributing features per alert; displayed alongside risk score in nurse dashboard\nEpic SMART-on-FHIR Integration — real-time alert delivery to nurse workstations via Epic notification API\nDrift Monitoring — weekly statistical comparison of score distribution vs training baseline; automated report to IT and clinical lead',
   },
 }

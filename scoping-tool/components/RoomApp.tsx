@@ -199,7 +199,7 @@ export default function RoomApp({ code, initialState, persist = true, observe = 
       ...s,
       solutionSpace: {
         ...s.solutionSpace,
-        approaches: [...s.solutionSpace.approaches, { id: uid(), name: '', description: '', pros: '', cons: '' }],
+        approaches: [...s.solutionSpace.approaches, { id: uid(), name: '', description: '', inputTypes: '', outputTypes: '', pros: '', cons: '' }],
       },
     }))
   const deleteApproach = (id: string) =>

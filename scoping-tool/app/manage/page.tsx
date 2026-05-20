@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { RefreshCw, Trash2, Eye, Users, Clock, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import PasswordGate from '@/components/PasswordGate'
 
 interface Participant { name: string; observer: boolean }
 interface Room {
@@ -35,7 +36,7 @@ function elapsed(ms: number) {
   return `${Math.floor(s / 3600)}h ago`
 }
 
-export default function ManagePage() {
+function ManageContent() {
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
   const [lastRefresh, setLastRefresh] = useState(Date.now())
@@ -196,5 +197,13 @@ export default function ManagePage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function ManagePage() {
+  return (
+    <PasswordGate>
+      <ManageContent />
+    </PasswordGate>
   )
 }

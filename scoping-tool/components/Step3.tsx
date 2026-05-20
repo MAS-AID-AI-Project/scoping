@@ -27,7 +27,7 @@ export default function Step3({ solutionSpace, onUpdate, onUpdateApproach, onAdd
       <div>
         <h2 className="text-2xl font-semibold text-slate-900 mb-1">Solution Space</h2>
         <p className="text-slate-500 text-sm leading-relaxed">
-          Define the system as a black box first — add each input and output as a separate item —
+          Define the system as a black box first — add each possible input and output as a separate item —
           then brainstorm 3–4 distinct approaches. Don&apos;t commit to AI yet.
         </p>
       </div>
@@ -68,7 +68,7 @@ export default function Step3({ solutionSpace, onUpdate, onUpdateApproach, onAdd
               onClick={addInput}
               className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-600 font-medium mt-1 ml-0.5 transition-colors"
             >
-              <Plus className="w-3 h-3" /> Add input
+              <Plus className="w-3 h-3" /> Add possible input
             </button>
           </div>
 
@@ -114,7 +114,7 @@ export default function Step3({ solutionSpace, onUpdate, onUpdateApproach, onAdd
               onClick={addOutput}
               className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-600 font-medium mt-1 transition-colors"
             >
-              <Plus className="w-3 h-3" /> Add output
+              <Plus className="w-3 h-3" /> Add possible output
             </button>
           </div>
         </div>
@@ -139,6 +139,7 @@ export default function Step3({ solutionSpace, onUpdate, onUpdateApproach, onAdd
             <h3 className="text-sm font-semibold text-slate-700">Solution Approaches</h3>
             <p className="text-xs text-slate-400 mt-0.5">
               3–4 distinct approaches. Include both AI and non-AI options — don&apos;t filter yet.
+              Not sure what approaches are possible? Ask a TA for guidance.
             </p>
           </div>
           {solutionSpace.approaches.length < 4 && (
@@ -173,6 +174,18 @@ export default function Step3({ solutionSpace, onUpdate, onUpdateApproach, onAdd
                   <textarea rows={2} value={a.description} onChange={e => onUpdateApproach(a.id, 'description', e.target.value)}
                     placeholder="e.g. Hard-coded vital thresholds trigger nurse alerts. No learning from historical data."
                     className={inputCls} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Input type</label>
+                    <textarea rows={2} value={a.inputTypes} onChange={e => onUpdateApproach(a.id, 'inputTypes', e.target.value)}
+                      placeholder="e.g. Tabular snapshot of current vitals and lab values" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Output type</label>
+                    <textarea rows={2} value={a.outputTypes} onChange={e => onUpdateApproach(a.id, 'outputTypes', e.target.value)}
+                      placeholder="e.g. Risk tier (Low / Medium / High) + score" className={inputCls} />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

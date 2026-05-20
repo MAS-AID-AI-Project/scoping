@@ -28,7 +28,6 @@ export default function Step5({ state, template, onUpdateSpec }: Props) {
     const today = new Date().toISOString().slice(0, 10)
     const orgName = spec.clientName || template?.title || 'Client Organisation'
 
-    const challengeLines = problemDef.problemStatement.split('\n').filter(l => l.trim())
     const objectiveItems = metrics.objectives.filter(o => o.trim())
     const shRows = problemDef.stakeholders.filter(r => r.role.trim())
     const baselineRows = metrics.baselines.filter(b => b.approach.trim())
@@ -134,18 +133,21 @@ export default function Step5({ state, template, onUpdateSpec }: Props) {
     ${state.solutionSpace.constraints ? `<p style="font-size:10pt"><strong>Constraints:</strong> <span style="color:#475569">${esc(state.solutionSpace.constraints)}</span></p>` : ''}
   </div>
 
-  ${chosenFeasibility?.dataVolume || chosenFeasibility?.modelingStack ? `
+  ${spec.expectedDataAvailability ? `
   <div class="section">
-    <h2>Data & Infrastructure</h2>
-    ${chosenFeasibility.dataVolume ? `<p style="font-size:10pt;margin-bottom:6px"><strong>Data:</strong> <span style="color:#475569">${esc(chosenFeasibility.dataVolume)}</span></p>` : ''}
-    ${chosenFeasibility.dataLabels ? `<p style="font-size:10pt;margin-bottom:6px"><strong>Labels:</strong> <span style="color:#475569">${chosenFeasibility.dataLabels}</span></p>` : ''}
-    ${chosenFeasibility.computeBudget ? `<p style="font-size:10pt;margin-bottom:6px"><strong>Compute:</strong> <span style="color:#475569">${esc(chosenFeasibility.computeBudget)}</span></p>` : ''}
-    ${chosenFeasibility.modelingStack ? `<p style="font-size:10pt"><strong>Stack:</strong> <span style="color:#475569">${esc(chosenFeasibility.modelingStack)}</span></p>` : ''}
+    <h2>Expected Data Availability</h2>
+    <p class="pre">${esc(spec.expectedDataAvailability)}</p>
+  </div>` : ''}
+
+  ${spec.expectedComputeUsage ? `
+  <div class="section">
+    <h2>Expected Compute Usage</h2>
+    <p class="pre">${esc(spec.expectedComputeUsage)}</p>
   </div>` : ''}
 
   ${(chosenFeasibility?.regulations ?? []).length > 0 ? `
   <div class="section">
-    <h2>Regulatory & Compliance Requirements</h2>
+    <h2>Regulatory & Compliance Considerations</h2>
     ${(chosenFeasibility?.regulations ?? []).map(r => `
       <p class="reg-name">${esc(r.name)}</p>
       ${r.articles ? `<p class="reg-body">${esc(r.articles).replace(/\n/g,'<br>')}</p>` : ''}`).join('')}
@@ -203,6 +205,24 @@ export default function Step5({ state, template, onUpdateSpec }: Props) {
             className={inputCls} />
         </Card>
 
+        <Card title="Expected Data Availability">
+          <p className="text-xs text-slate-400 mb-2">
+            What data will be available when the project starts? Note any gaps, access timelines, or labelling requirements that need to be resolved.
+          </p>
+          <textarea rows={4} value={spec.expectedDataAvailability} onChange={e => onUpdateSpec('expectedDataAvailability', e.target.value)}
+            placeholder={`e.g. 5 years of historical admissions accessible via Epic FHIR API after IT sign-off (est. 6 weeks).\nKnown gaps: lactate values absent for ~18% of admissions; transport-related vital sign gaps (~8% of time steps).`}
+            className={inputCls} />
+        </Card>
+
+        <Card title="Expected Compute Usage">
+          <p className="text-xs text-slate-400 mb-2">
+            What compute infrastructure is expected? Describe training requirements, inference frequency, and any hardware constraints.
+          </p>
+          <textarea rows={4} value={spec.expectedComputeUsage} onChange={e => onUpdateSpec('expectedComputeUsage', e.target.value)}
+            placeholder={`e.g. Training: on-premise GPU server (1 × P100), est. 3–5 hours per run, quarterly retraining.\nInference: scheduled every 15 min across active patients; ~2 ms per patient. Runs on existing integration server — no additional hardware needed.`}
+            className={inputCls} />
+        </Card>
+
         <Card title="Solution Components">
           {chosenFeasibility?.sieveBaseline && (
             <div className="flex gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-3 mb-4">
@@ -233,6 +253,12 @@ export default function Step5({ state, template, onUpdateSpec }: Props) {
           <ReadOnlyCard title="Chosen Solution Approach (from Step 3)">
             <p className="text-sm font-semibold text-slate-800 mb-1">{chosen.name}</p>
             <p className="text-sm text-slate-600 leading-relaxed">{chosen.description}</p>
+            {(chosen.inputTypes || chosen.outputTypes) && (
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {chosen.inputTypes && <div><p className="text-xs font-semibold text-slate-400 mb-0.5">Input type</p><p className="text-xs text-slate-500">{chosen.inputTypes}</p></div>}
+                {chosen.outputTypes && <div><p className="text-xs font-semibold text-slate-400 mb-0.5">Output type</p><p className="text-xs text-slate-500">{chosen.outputTypes}</p></div>}
+              </div>
+            )}
           </ReadOnlyCard>
         )}
       </div>
@@ -303,8 +329,20 @@ export default function Step5({ state, template, onUpdateSpec }: Props) {
               </DocSection>
             )}
 
+            {spec.expectedDataAvailability && (
+              <DocSection title="Expected Data Availability">
+                <p className="text-sm leading-relaxed whitespace-pre-line">{spec.expectedDataAvailability}</p>
+              </DocSection>
+            )}
+
+            {spec.expectedComputeUsage && (
+              <DocSection title="Expected Compute Usage">
+                <p className="text-sm leading-relaxed whitespace-pre-line">{spec.expectedComputeUsage}</p>
+              </DocSection>
+            )}
+
             {(chosenFeasibility?.regulations ?? []).length > 0 && (
-              <DocSection title="Regulatory & Compliance Requirements">
+              <DocSection title="Regulatory & Compliance Considerations">
                 <div className="space-y-3">{(chosenFeasibility?.regulations ?? []).map(r=>(
                   <div key={r.id}><p className="text-sm font-bold">{r.name}</p>{r.articles&&<p className="text-sm text-slate-600 mt-0.5 whitespace-pre-line">{r.articles}</p>}</div>
                 ))}</div>

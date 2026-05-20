@@ -34,7 +34,7 @@ export default function ProblemSelect({ code, onSelect, onCustom }: Props) {
           </p>
 
           <div className="grid gap-4 mb-6">
-            {PROBLEM_TEMPLATES.map(t => {
+            {PROBLEM_TEMPLATES.filter(t => t.id !== 'loan').map(t => {
               const c = COLOR_MAP[t.color] ?? COLOR_MAP.indigo
               return (
                 <button
