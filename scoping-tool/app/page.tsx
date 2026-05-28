@@ -1,5 +1,5 @@
-import Landing from '@/components/Landing'
+import StaticApp from '@/components/StaticApp'
 
 export default function Home() {
-  return <Landing />
+  return <StaticApp />
 }
