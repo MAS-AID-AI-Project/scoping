@@ -18,6 +18,7 @@ import Step2 from '@/components/Step2'
 import Step3 from '@/components/Step3'
 import Step4 from '@/components/Step4'
 import Step5 from '@/components/Step5'
+import Link from 'next/link'
 import { ArrowLeft, ArrowRight, RotateCcw, Wifi, WifiOff, Eye } from 'lucide-react'
 
 const STEP_LABELS = ['Problem Definition', 'Success Metrics', 'Solution Space', 'Feasibility', 'Final Document']
@@ -365,6 +366,10 @@ export default function RoomApp({ code, initialState, persist = true, observe = 
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-3">
+              <Link href="/" className="flex items-center gap-1 text-slate-400 hover:text-slate-600 text-xs font-semibold transition-colors">
+                <ArrowLeft className="w-3.5 h-3.5" /> Home
+              </Link>
+              <span className="text-slate-200">|</span>
               <span className="text-base font-semibold text-slate-900">AI Scoping Tool</span>
               <span className="hidden sm:inline text-slate-400 text-sm">— MSAID</span>
               <span className="font-mono text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">{code}</span>
