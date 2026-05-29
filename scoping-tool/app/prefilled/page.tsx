@@ -29,6 +29,9 @@ const EXAMPLES = [
 function ExampleSelector({ onSelect }: { onSelect: (state: TeamState) => void }) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
+      <a href="/" className="fixed top-4 left-4 flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 shadow-sm transition-colors">
+        <ArrowLeft className="w-3.5 h-3.5" /> Home
+      </a>
       <div className="max-w-2xl w-full">
         <div className="text-center mb-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500 mb-3">Instructor Portal</p>
