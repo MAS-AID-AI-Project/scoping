@@ -7,6 +7,7 @@ import { PREFILLED_LOAN } from '@/lib/prefilled-loan'
 import { PREFILLED_HEALTHCARE } from '@/lib/prefilled-healthcare'
 import { PREFILLED_AML } from '@/lib/prefilled-aml'
 import { PREFILLED_SERVICES } from '@/lib/prefilled-services'
+import { PREFILLED_TRUTHGUARD } from '@/lib/prefilled-truthguard'
 import type { TeamState } from '@/lib/types'
 import { ArrowLeft } from 'lucide-react'
 
@@ -14,9 +15,20 @@ const COLOR_MAP: Record<string, { badge: string; bg: string; border: string; hov
   indigo: { badge: 'bg-indigo-50 text-indigo-700', bg: 'bg-indigo-50/50', border: 'border-indigo-200', hover: 'hover:border-indigo-400 hover:shadow-indigo-100' },
   emerald: { badge: 'bg-emerald-50 text-emerald-700', bg: 'bg-emerald-50/50', border: 'border-emerald-200', hover: 'hover:border-emerald-400 hover:shadow-emerald-100' },
   amber: { badge: 'bg-amber-50 text-amber-700', bg: 'bg-amber-50/50', border: 'border-amber-200', hover: 'hover:border-amber-400 hover:shadow-amber-100' },
+  violet: { badge: 'bg-violet-50 text-violet-700', bg: 'bg-violet-50/50', border: 'border-violet-200', hover: 'hover:border-violet-400 hover:shadow-violet-100' },
 }
 
 const EXAMPLES = [
+  {
+    key: 'truthguard',
+    domain: 'Media',
+    color: 'violet',
+    title: 'AI-Powered Content Integrity Platform',
+    org: 'TruthGuard Media Solutions SA',
+    note: 'In-class demonstration',
+    description: 'Hybrid RoBERTa classifier + RAG fact-verification pipeline for misinformation detection at 10M items/day. Covers EU DSA, AI Act limited-risk, GDPR Art. 22, and bias-aware moderation.',
+    state: PREFILLED_TRUTHGUARD,
+  },
   {
     key: 'loan',
     domain: 'Finance',
