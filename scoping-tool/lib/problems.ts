@@ -93,6 +93,49 @@ Annual churn rate has risen from 8% two years ago to 12% today. Post-cancellatio
   },
   // Hidden — only used for the /prefilled instructor example, not shown to students
   {
+    id: 'media',
+    domain: 'Media',
+    color: 'violet',
+    title: 'AI-Powered Content Integrity Platform',
+    context: `TruthGuard Media Solutions SA is a B2B content verification company headquartered in Geneva, serving news publishers and social media platforms across Europe. The company processes over 10 million content items daily — articles, posts, and social updates submitted via API from approximately 40 client platforms. Clients include major European news networks and social platforms who rely on TruthGuard's verification signals for editorial and moderation decisions.
+
+Current process: Submitted content enters a manual review queue and is routed to domain-specialist fact-checkers (politics, health, finance), who cross-reference claims against primary sources and known misinformation databases. Average review time: 48–72 hours. Effective daily throughput: approximately 50,000 items out of 10 million received.
+
+Data assets available: FakeNewsNet dataset (political and celebrity news from PolitiFact and GossipCop); Wikipedia and MultiFC corpus (40,000+ fact-checked claims across domains); M4 dataset (machine-generated text samples from multiple LLMs). TruthGuard has indicated these datasets are available for this project.`,
+    situation: `TruthGuard has been asked to assess whether an AI-powered content moderation pipeline could help close the gap between content volume and review capacity — reducing identification time from 72 hours to under 1 hour for flagged content, while achieving 80%+ detection rates across politics, health, and finance domains.
+
+There are two complicating factors. The EU Digital Services Act (DSA) now requires platforms to provide a "statement of reasons" for every content moderation decision and maintain a human-review appeals process — requirements the current manual workflow cannot meet at scale. The EU AI Act classifies content moderation for misinformation as limited-risk AI, requiring transparency disclosures and technical documentation.
+
+Any proposed solution must be explainable, auditable, and scalable to the full 10M item/day volume — while avoiding demographic bias in moderation decisions across political, ethnic, and religious content.`,
+    stakeholders: [
+      {
+        role: 'Chief Content Officer',
+        description: 'Responsible for platform safety and publisher client trust. Accountable for harmful content escaping undetected, which damages TruthGuard\'s brand and threatens client contracts. Primary concern: reducing the volume of verified misinformation that reaches readers before detection.',
+      },
+      {
+        role: 'Legal & Compliance',
+        description: 'Ensures all moderation decisions meet EU DSA, EU AI Act, and GDPR requirements. Must be able to produce a statement of reasons for every removal decision. Concerned about liability if the system makes biased decisions or cannot be audited.',
+      },
+      {
+        role: 'Engineering Teams',
+        description: 'Responsible for building, integrating, and maintaining the pipeline at 10M items/day. Key concerns: API latency, system throughput, and integration with the existing review tooling. All processing must remain within EU jurisdiction.',
+      },
+      {
+        role: 'Content Creators',
+        description: 'Producers whose content is subject to moderation. Primary concern: fair treatment and the ability to understand and appeal moderation decisions. False positives — legitimate content incorrectly flagged — are a major trust risk.',
+      },
+      {
+        role: 'Advertisers',
+        description: 'Pay clients of TruthGuard\'s publisher clients. Brand safety is their primary concern — their ads must not appear next to unverified or false content. TruthGuard\'s accuracy directly affects advertiser confidence in the platform.',
+      },
+      {
+        role: 'End Users / Readers',
+        description: 'Consumers of content on TruthGuard\'s client platforms. Care about information quality and protection from misinformation, but also about free expression — false removals of legitimate content erode platform trust.',
+      },
+    ],
+  },
+  // Hidden — only used for the /prefilled instructor example, not shown to students
+  {
     id: 'loan',
     domain: 'Finance',
     color: 'indigo',

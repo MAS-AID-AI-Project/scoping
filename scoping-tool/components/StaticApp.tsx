@@ -312,6 +312,7 @@ function domainBadge(color: string) {
     emerald: 'bg-emerald-50 text-emerald-700',
     indigo: 'bg-indigo-50 text-indigo-700',
     amber: 'bg-amber-50 text-amber-700',
+    violet: 'bg-violet-50 text-violet-700',
   }
   return map[color] ?? 'bg-slate-100 text-slate-600'
 }
