@@ -1,11 +1,10 @@
 import type { TeamState } from './types'
 
 export const PREFILLED_TRUTHGUARD: TeamState = {
-  problemId: 'custom',
-  customTitle: 'AI-Powered Content Integrity Platform',
-  customContext: 'Media & Content Moderation',
-  customSituation:
-    'TruthGuard Media Solutions SA serves news publishers and social platforms across Europe, processing over 10 million content items daily for fact-checking and authenticity verification. Manual moderation takes 48–72 hours, allowing misinformation to reach millions before verification. The EU Digital Services Act and AI Act require transparent, explainable moderation decisions.',
+  problemId: 'media',
+  customTitle: '',
+  customContext: '',
+  customSituation: '',
   currentStep: 1,
 
   problemDef: {
