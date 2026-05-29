@@ -7,6 +7,7 @@ import { PREFILLED_LOAN } from '@/lib/prefilled-loan'
 import { PREFILLED_HEALTHCARE } from '@/lib/prefilled-healthcare'
 import { PREFILLED_AML } from '@/lib/prefilled-aml'
 import { PREFILLED_SERVICES } from '@/lib/prefilled-services'
+import { PREFILLED_TRUTHGUARD } from '@/lib/prefilled-truthguard'
 import type { TeamState } from '@/lib/types'
 import { ArrowLeft } from 'lucide-react'
 
@@ -14,9 +15,11 @@ const COLOR_MAP: Record<string, { badge: string; bg: string; border: string; hov
   indigo:  { badge: 'bg-indigo-50 text-indigo-700',   bg: 'bg-indigo-50/50',  border: 'border-indigo-200',  hover: 'hover:border-indigo-400 hover:shadow-indigo-100'  },
   emerald: { badge: 'bg-emerald-50 text-emerald-700', bg: 'bg-emerald-50/50', border: 'border-emerald-200', hover: 'hover:border-emerald-400 hover:shadow-emerald-100' },
   amber:   { badge: 'bg-amber-50 text-amber-700',     bg: 'bg-amber-50/50',   border: 'border-amber-200',   hover: 'hover:border-amber-400 hover:shadow-amber-100'   },
+  violet:  { badge: 'bg-violet-50 text-violet-700',   bg: 'bg-violet-50/50',  border: 'border-violet-200',  hover: 'hover:border-violet-400 hover:shadow-violet-100'  },
 }
 
 const EXAMPLES = [
+  { key: 'truthguard', domain: 'Media',             color: 'violet',  title: 'AI-Powered Content Integrity Platform', org: 'TruthGuard Media Solutions SA', note: 'In-class demonstration', description: 'Hybrid RoBERTa + RAG misinformation detection pipeline with DSA-compliant explanations.', state: PREFILLED_TRUTHGUARD },
   { key: 'loan',       domain: 'Finance',           color: 'indigo',  title: 'Loan Default Risk Assessment', org: 'SwissCredit Bank AG',          note: 'Semester project example', description: 'XGBoost credit scoring pipeline with SHAP explanations.', state: PREFILLED_LOAN },
   { key: 'healthcare', domain: 'Healthcare',         color: 'emerald', title: 'ICU Early Warning System',     org: 'Regional Medical Centre',      note: null, description: 'XGBoost patient deterioration scoring via Epic SMART-on-FHIR.', state: PREFILLED_HEALTHCARE },
   { key: 'aml',        domain: 'Finance',            color: 'indigo',  title: 'AML Alert Triage System',      org: 'Helvetia Wealth Management',   note: null, description: 'XGBoost model to prioritise the AML alert queue.', state: PREFILLED_AML },
